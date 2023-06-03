@@ -1,5 +1,6 @@
 from . import db
 from flask_login import UserMixin
+from flask_dance.consumer.storage.sqla import OAuthConsumerMixin, SQLAlchemyStorage
 
 
 class User(db.Model,UserMixin):
@@ -24,3 +25,6 @@ class Post(db.Model):
     def __repr__(self):
         return '<Post %r' % self.id
 
+class OAuth(OAuthConsumerMixin, db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey(User.id))
+    user = db.relationship(User)

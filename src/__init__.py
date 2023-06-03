@@ -1,5 +1,9 @@
 from flask import Flask
-from flask_login import LoginManager
+from flask_dance.contrib.github import make_github_blueprint, github
+from flask_dance.consumer.storage.sqla import SQLAlchemyStorage
+from flask_dance.consumer import oauth_authorized
+from sqlalchemy.orm.exc import NoResultFound
+from flask_login import LoginManager, current_user, login_user
 
 import os
 from flask_sqlalchemy import SQLAlchemy
@@ -22,11 +26,31 @@ def create_app():
 
     from .auth import auth
     from .views import views 
+    from .models import User,Post,OAuth
+    blueprint = make_github_blueprint(
+        client_id=config.get('GITHUB_CLIENT_ID'),
+        client_secret=config.get('GITHUB_CLIENT_SECRET'),
+        scope="repo",
+        storage=SQLAlchemyStorage(OAuth, db.session, user=current_user)
+    )
 
     app.register_blueprint(auth, url_prefix='/')
     app.register_blueprint(views, url_prefix='/')
+    app.register_blueprint(blueprint, url_prefix="/login")
+    @oauth_authorized.connect_via(blueprint)
+    def github_logged_in(blueprint, token):
+        github_info = blueprint.session.get("/user")
+        if github_info.ok:
+            github_user_id = str(github_info.json()["id"])
+            query = User.query.filter_by(github_id=github_user_id)
+            try:
+                user = query.one()
+            except NoResultFound:
+                user = User(github_id=github_user_id)
+                db.session.add(user)
+                db.session.commit()
+            login_user(user)
 
-    from .models import User,Post
 
     if not os.path.exists(f'src/{DB_NAME}'):
         with app.app_context():
