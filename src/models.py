@@ -1,12 +1,12 @@
 from . import db
 from flask_login import UserMixin
-from flask_dance.consumer.storage.sqla import OAuthConsumerMixin, SQLAlchemyStorage
 
 
 class User(db.Model,UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), nullable=False)
-    password = db.Column(db.String(150))
+    email = db.Column(db.String(150),nullable=True)
+    github_token = db.Column(db.String(500),nullable=True)
     posts = db.relationship('Post', backref='user')
 
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -25,6 +25,3 @@ class Post(db.Model):
     def __repr__(self):
         return '<Post %r' % self.id
 
-class OAuth(OAuthConsumerMixin, db.Model):
-    user_id = db.Column(db.Integer, db.ForeignKey(User.id))
-    user = db.relationship(User)
