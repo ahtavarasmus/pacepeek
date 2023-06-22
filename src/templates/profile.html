@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}PacePeek - Profile{% endblock %}
+{% block content %}
+<h1>Welcome, {{user.username}}</h1>
+<h2>Your Repositories</h2>
+<ul>
+{% for repo in repos %}
+<li><a href="https://github.com/{{repo.owner}}/{{repo.name}}">{{repo.name}}</a></li>
+{% endfor %}
+</ul>
+<div id="add-repo-div">
+    <button id="load-repos-btn" hx-get="/get-repos" hx-trigger="click" hx-target="#add-repo-div" hx-swap="outerHTML">
+        Search New Repos
+    </button>
+</div>
+{% endblock %}
+

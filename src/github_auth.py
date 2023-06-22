@@ -16,11 +16,7 @@ def login():
 
 @github_auth.route('/github-callback')
 def github_callback():
-    print(f"Retrieved state {session.get('oauth_state')}")
     github = OAuth2Session(config.get('GITHUB_CLIENT_ID'),state=session['oauth_state'])
-    print(f'GITHUB_TOKEN_URL: {config.get("GITHUB_TOKEN_URL")}')  # Debugging print statement
-    print(f'GITHUB_CLIENT_SECRET: {config.get("GITHUB_CLIENT_SECRET")}')  # Debugging print statement
-    print(f'request.url: {request.url}')  # Debugging print statement
 
     try:
         token = github.fetch_token(config.get('GITHUB_TOKEN_URL'), 
@@ -42,16 +38,6 @@ def github_callback():
     login_user(user, remember=True)
     flash('Logged in!', category='success')
     return redirect(url_for('views.home'))
-
-@github_auth.route('/profile')
-def profile():
-    if current_user.is_authenticated:
-        github = OAuth2Session(config.get('GITHUB_CLIENT_ID'),token=session['oauth_token'])
-        repos_json = github.get('https://api.github.com/user/repos').json()
-        repos = [repo['name'] for repo in repos_json]
-        return 'Logged in as ' + current_user.username + '. Your repos are: ' + ', '.join(repos)
-    else:
-        return 'Not logged in.'
 
 
 @github_auth.route('/logout')

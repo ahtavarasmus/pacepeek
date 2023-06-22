@@ -8,6 +8,7 @@ class User(db.Model,UserMixin):
     email = db.Column(db.String(150),nullable=True)
     github_token = db.Column(db.String(500),nullable=True)
     posts = db.relationship('Post', backref='user')
+    repos = db.relationship('Repo', backref='user')
 
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
@@ -25,3 +26,12 @@ class Post(db.Model):
     def __repr__(self):
         return '<Post %r' % self.id
 
+class Repo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(300))
+    owner = db.Column(db.String(300))
+    latest_commit_sha = db.Column(db.String(300))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    def __repr__(self):
+        return '<Repo %r' % self.id
