@@ -23,7 +23,9 @@ def home():
 @views.route('/profile')
 def profile():
     repos = Repo.query.filter_by(user_id=current_user.id).all()
-    return render_template("profile.html", user=current_user, repos=repos)
+    # getting all the posts from the user that are ready (not_finished=False)
+    posts = current_user.posts.filter_by(not_finished=False).all()
+    return render_template("profile.html", user=current_user, repos=repos, posts=posts)
 
 
 @login_required

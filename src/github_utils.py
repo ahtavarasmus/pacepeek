@@ -1,8 +1,8 @@
 from requests_oauthlib import OAuth2Session
 from pprint import pprint
-from . import config
-from .models import User
-from .utils import let_gpt_explain
+from . import config,db
+from .models import User, Post, Commit, Patch
+from .utils import let_gpt_explain, judge_significance
 import requests
 
 
@@ -50,7 +50,7 @@ def get_github_session(user_login):
     github = OAuth2Session(config.get('GITHUB_CLIENT_ID'), token=token)
     return github
 
-def get_commit_patches(owner_login: str, repo_name: str, commit_sha: str):
+def get_commit_patches_data(owner_login: str, repo_name: str, commit_sha: str) -> str:
     """
     Retrieves the patch for a commit.
 
@@ -59,38 +59,66 @@ def get_commit_patches(owner_login: str, repo_name: str, commit_sha: str):
         repo_name (str): The name of the repository.
         commit_sha (str): The SHA of the commit.
     Returns:
-        changes (dict): {message: str, file_patches: dict}
+        str: The patches for the commit in a nice format.
     """
-    github = get_github_session(owner_login)
-    specific_commit_json = github.get(f'https://api.github.com/repos/{owner_login}/{repo_name}/commits/{commit_sha}').json()
-    changes = {}
-    commit_message = specific_commit_json['commit']['message']
-    changes['message'] = commit_message
-    file_patches = {}
-    for file in specific_commit_json['files']:
-        # Check if 'patch' exists in the file dictionary
-        filename = file['filename']
-        if 'patch' in file:
-            patch = file['patch']
-            file_patches[filename] = patch
-    changes['file_patches'] = file_patches
-    return changes
 
-def handle_payload(payload):
+    post = Post.query.filter_by(repo=repo_name, not_finished=True).first()
+    if not post:
+        user = User.query.filter_by(login=owner_login).first()
+        post = Post(user=user,repo=repo_name)
+        db.session.add(post)
+
+    # find the new commits data
+    github = get_github_session(owner_login)
+    new_commit_json = github.get(f'https://api.github.com/repos/{owner_login}/{repo_name}/commits/{commit_sha}').json()
+
+    # add the new commit to the database
+    commit_message = new_commit_json['commit']['message']
+    url = f"https://api.github.com/{owner_login}/{repo_name}/commit/{commit_sha}"
+    new_commit = Commit(message=commit_message, post=post, sha=commit_sha, url=url)
+    db.session.add(new_commit)
+
+    # add the new commit patches to the database
+    for file in new_commit_json['files']:
+        # Check if 'patch' exists in the file dictionary
+        if 'patch' in file:
+            new_patch = Patch(filename=file['filename'], commit=new_commit)
+            patch = file['patch']
+            new_patch.patch_body = patch
+            db.session.add(new_patch)
+
+    db.session.commit()
+
+    # make the commits and patches data into a nice format
+    data = ""
+    for commit in post.commits:
+        changes = {'message': commit.message}
+        data += f"Commit Message: {commit.message} \n"
+        data += "Files: \n"
+        for patch in commit.patches:
+            data += f"  File: {patch.filename} \n"
+            data += f"  Patch: {patch.patch_body} \n"
+
+    return data
+
+def handle_payload(payload: dict):
     """
     Handles a webhook payload from GitHub.
     """
     commit_sha = payload['after']
     repo_name = payload['repository']['name']
     owner_login = payload['repository']['owner']['login']
-    commit_patches = get_commit_patches(owner_login, repo_name, commit_sha)
-    # making these patches into a nicer format to prompt to gpt
-    changes = f"Message: {commit_patches['message']} \n"
-    changes += "Files: \n"
-    for filename, patch in commit_patches['file_patches'].items():
-        changes += f"File: {filename} \n"
-        changes += f"Patch: {patch} \n"
-    post = let_gpt_explain(changes)
-    print(post)
+    commit_patches_data = get_commit_patches_data(owner_login, repo_name, commit_sha)
+    sig = judge_significance(commit_patches_data)
+    if sig == 5:
+        print("Significant")
+        post_text = let_gpt_explain(owner_login,commit_patches_data)
+        post = Post.query.filter_by(repo=repo_name, not_finished=True).first()
+        post.not_finished = False
+        post.text = post_text
+        db.session.commit()
+        print(post)
+    else:
+        print("Not significant:", sig)
 
 

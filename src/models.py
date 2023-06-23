@@ -21,7 +21,10 @@ class User(db.Model,UserMixin):
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.String(300))
+    repo = db.Column(db.String(300))
+    text = db.Column(db.String)
+    not_finished = db.Column(db.Boolean, default=True, nullable=False)
+
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     commits = db.relationship('Commit', backref='post')
 
@@ -34,9 +37,18 @@ class Commit(db.Model):
     message = db.Column(db.String(300))
     link = db.Column(db.String(300))
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
+    patches = db.relationship('Patch', backref='commit')
 
     def __repr__(self):
         return '<Commit %r' % self.id
+class Patch(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(300))
+    patch_body = db.Column(db.String(300))
+    commit_id = db.Column(db.Integer, db.ForeignKey('commit.id'))
+
+    def __repr__(self):
+        return '<Patch %r' % self.id
 
 class Repo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
