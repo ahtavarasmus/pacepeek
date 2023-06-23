@@ -2,6 +2,34 @@ from requests_oauthlib import OAuth2Session
 from pprint import pprint
 from . import config
 from .models import User
+from .utils import let_gpt_explain
+import requests
+
+
+
+def setup_webhook(user: User, repo_name: str, owner_login: str):
+    """
+    Sets up a webhook for the given repository.
+    """
+    url = f"https://api.github.com/repos/{owner_login}/{repo_name}/hooks"
+    headers = {
+        'Authorization': f"token {user.github_token}",
+        'Accept': 'application/vnd.github.v3+json',
+    }
+    payload = {
+        'name': 'web',
+        'active': True,
+        'events': ['push'],
+        'config': {
+            'url': 'https://2671e04ad2ab.ngrok.app/payload',  # Replace with your server's URL.
+            'content_type': 'json',
+        },
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 201:
+        print(f"Failed to set up webhook for {repo_name}: {response.content}")
+        return False
+    return True
 
 
 def get_github_session(user_login):
@@ -56,5 +84,13 @@ def handle_payload(payload):
     repo_name = payload['repository']['name']
     owner_login = payload['repository']['owner']['login']
     commit_patches = get_commit_patches(owner_login, repo_name, commit_sha)
-    pprint(commit_patches)
+    # making these patches into a nicer format to prompt to gpt
+    changes = f"Message: {commit_patches['message']} \n"
+    changes += "Files: \n"
+    for filename, patch in commit_patches['file_patches'].items():
+        changes += f"File: {filename} \n"
+        changes += f"Patch: {patch} \n"
+    post = let_gpt_explain(changes)
+    print(post)
+
 

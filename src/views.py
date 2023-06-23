@@ -7,8 +7,8 @@ from src.github_auth import login
 from . import db,config
 from .models import User, Repo
 from pprint import pprint
-from .utils import get_repos, setup_webhook
-from .github_utils import handle_payload
+from .utils import get_repos
+from .github_utils import handle_payload, setup_webhook
 
 
 views = Blueprint('views', __name__)
