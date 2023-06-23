@@ -17,23 +17,22 @@ def login():
 @github_auth.route('/github-callback')
 def github_callback():
     github = OAuth2Session(config.get('GITHUB_CLIENT_ID'),state=session['oauth_state'])
+    print(f"Retrieved state {session['oauth_state']}")
 
-    try:
-        token = github.fetch_token(config.get('GITHUB_TOKEN_URL'), 
+    token = github.fetch_token(config.get('GITHUB_TOKEN_URL'), 
                                    client_secret=config.get('GITHUB_CLIENT_SECRET'), 
                                    authorization_response=request.url)
-    except Exception as e:
-        print(f'Error fetching token: {str(e)}')  # Debugging print statement
-        raise e
-
     session['oauth_token'] = token
 
     github_user_data = github.get('https://api.github.com/user').json()
     github_user_email = github_user_data.get('email')
     user = User.query.filter_by(email=github_user_email).first()
     if not user:
-        user = User(username=github_user_data['name'],email=github_user_email,github_token=token['access_token'])
+        user = User(username=github_user_data['name'],login=github_user_data['login'],email=github_user_email,github_token=token['access_token'])
         db.session.add(user)
+        db.session.commit()
+    else:
+        user.github_token = token['access_token']
         db.session.commit()
     login_user(user, remember=True)
     flash('Logged in!', category='success')

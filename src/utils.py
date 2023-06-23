@@ -16,20 +16,17 @@ def get_repos():
     repos_json = github.get('https://api.github.com/user/repos').json()
     repos_dict = {}
     for repo in repos_json:
-            
-        repo_name = repo['name']
-        owner_login = repo['owner']['login']
-        repos_dict[repo_name] = owner_login
+        if not repo['private']:
+            repo_name = repo['name']
+            owner_login = repo['owner']['login']
+            repos_dict[repo_name] = owner_login
     return repos_dict
 
-def get_watch_list():
-    """
-    Returns a list of repositories that the user is watching.
-    """
-    watch_list = []
-    return watch_list
 
 def setup_webhook(user: User, repo_name: str, owner_login: str):
+    """
+    Sets up a webhook for the given repository.
+    """
     url = f"https://api.github.com/repos/{owner_login}/{repo_name}/hooks"
     headers = {
         'Authorization': f"token {user.github_token}",
@@ -40,7 +37,7 @@ def setup_webhook(user: User, repo_name: str, owner_login: str):
         'active': True,
         'events': ['push'],
         'config': {
-            'url': 'https://your-app.com/payload',  # Replace with your server's URL.
+            'url': 'https://2671e04ad2ab.ngrok.app/payload',  # Replace with your server's URL.
             'content_type': 'json',
         },
     }
@@ -49,3 +46,5 @@ def setup_webhook(user: User, repo_name: str, owner_login: str):
         print(f"Failed to set up webhook for {repo_name}: {response.content}")
         return False
     return True
+
+

@@ -8,6 +8,7 @@ from . import db,config
 from .models import User, Repo
 from pprint import pprint
 from .utils import get_repos, setup_webhook
+from .github_utils import handle_payload
 
 
 views = Blueprint('views', __name__)
@@ -23,6 +24,7 @@ def home():
 def profile():
     repos = Repo.query.filter_by(user_id=current_user.id).all()
     return render_template("profile.html", user=current_user, repos=repos)
+
 
 @login_required
 @views.route('/get-repos',methods=['GET'])
@@ -46,13 +48,27 @@ def add_repo_to_watch_list():
     repo = request.form.get('repos')
     if repo:
         repo_name, owner_login = repo.split(":")
-        # Add the repository to the user's watch list...
-        repo = Repo(name=repo_name, owner=owner_login, user_id=current_user.id)
-        db.session.add(repo)
-        db.session.commit()
-        #if setup_webhook(current_user, repo_name, owner_login):
-        #    flash(f"Added {repo_name} by {owner_login} to watch list")
+        # Add the repository to the user's watch list
+        if setup_webhook(current_user, repo_name, owner_login):
+            repo = Repo(name=repo_name, owner=owner_login, user_id=current_user.id)
+            db.session.add(repo)
+            db.session.commit()
+            flash(f"Added {repo_name} by {owner_login} to watch list")
+        else:
+            repo = Repo.query.filter_by(name=repo_name, owner=owner_login, user_id=current_user.id).first()
+            if not repo:
+                repo = Repo(name=repo_name, owner=owner_login, user_id=current_user.id)
+                db.session.add(repo)
+                db.session.commit()
+                flash(f"Added {repo_name} by {owner_login} to watch list")
+
 
     return redirect(url_for('views.profile'))
 
-    
+@views.route('/payload', methods=['POST'])
+def payload():
+    payload = request.get_json()
+    handle_payload(payload)
+    return '', 204
+
+   

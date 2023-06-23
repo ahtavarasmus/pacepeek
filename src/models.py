@@ -5,6 +5,7 @@ from flask_login import UserMixin
 class User(db.Model,UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), nullable=False)
+    login = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150),nullable=True)
     github_token = db.Column(db.String(500),nullable=True)
     posts = db.relationship('Post', backref='user')
@@ -22,9 +23,20 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.String(300))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    commits = db.relationship('Commit', backref='post')
 
     def __repr__(self):
         return '<Post %r' % self.id
+
+class Commit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sha = db.Column(db.String(300))
+    message = db.Column(db.String(300))
+    link = db.Column(db.String(300))
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
+
+    def __repr__(self):
+        return '<Commit %r' % self.id
 
 class Repo(db.Model):
     id = db.Column(db.Integer, primary_key=True)

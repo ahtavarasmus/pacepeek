@@ -1,4 +1,4 @@
 *venv*
-*.db
+*.db*
 *__pycache__*
 *instance*
