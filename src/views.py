@@ -5,7 +5,7 @@ from requests_oauthlib import OAuth2Session
 
 from src.github_auth import login
 from . import db,config
-from .models import User, Repo
+from .models import User, Repo, Post
 from pprint import pprint
 from .utils import get_repos
 from .github_utils import handle_payload, setup_webhook
@@ -24,7 +24,7 @@ def home():
 def profile():
     repos = Repo.query.filter_by(user_id=current_user.id).all()
     # getting all the posts from the user that are ready (not_finished=False)
-    posts = current_user.posts.filter_by(not_finished=False).all()
+    posts = Post.query.filter_by(user_id=current_user.id, not_finished=False).all()
     return render_template("profile.html", user=current_user, repos=repos, posts=posts)
 
 

@@ -19,10 +19,12 @@
         <h2>{{user.username}} in Repo {{post.repo}}</h2>
         <p>{{post.text}}</p>
     </div>
-    {% for commit in post.commits %}
-    <h3>Commits</h3>
-    <div class="commit">
-        <a href="{{commit.link}}">{{commit.sha}}</a>
+        {% for commit in post.commits %}
+        <h3>Commits</h3>
+        <div class="commit">
+            <a href="{{commit.link}}">{{commit.sha}}</a>
+        </div>
+        {% endfor %}
     {% endfor %}
 </div>
 {% endblock %}

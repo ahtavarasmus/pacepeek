@@ -74,8 +74,8 @@ def get_commit_patches_data(owner_login: str, repo_name: str, commit_sha: str) -
 
     # add the new commit to the database
     commit_message = new_commit_json['commit']['message']
-    url = f"https://api.github.com/{owner_login}/{repo_name}/commit/{commit_sha}"
-    new_commit = Commit(message=commit_message, post=post, sha=commit_sha, url=url)
+    url = f"https://github.com/{owner_login}/{repo_name}/commit/{commit_sha}"
+    new_commit = Commit(message=commit_message, post=post, sha=commit_sha, link=url)
     db.session.add(new_commit)
 
     # add the new commit patches to the database
