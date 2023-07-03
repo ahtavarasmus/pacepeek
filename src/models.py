@@ -11,6 +11,7 @@ class User(db.Model,UserMixin):
     posts = db.relationship('Post', backref='user')
     repos = db.relationship('Repo', backref='user')
 
+
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     def get_id(self):
