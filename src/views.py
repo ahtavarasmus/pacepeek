@@ -19,23 +19,66 @@ views = Blueprint('views', __name__)
 @login_required
 @views.route('/', methods=['GET', 'POST'])
 def home():
+    if request.method == "POST":
+        search_term = request.form.get('search')
+        user = User.query.filter_by(login=search_term).first()
+        print("MOI")
+        if user:
+            return redirect(f"/profile/{user.login}")
+        flash("Couldn't find the user")
+        
+
     session['oldest_post_time'] = datetime.utcnow()
     posts = get_next_posts()
     return render_template("home.html", user=current_user,posts=posts)
 
 @login_required
-@views.route('/profile/<login>')
-def profile(login):
-    if current_user.login == login:
+@views.route('/profile/<user_login>')
+def profile(user_login):
+    if current_user.login == user_login:
         user = current_user
     else:
-        user = User.query.filter_by(login=login).first()
+        user = User.query.filter_by(login=user_login).first()
 
     repos = user.repos
+    is_following = current_user.is_following(user)
     # getting all the posts from the user that are ready (not_finished=False)
     posts = Post.query.filter_by(user_id=user.id, not_finished=False).all()
         
-    return render_template("profile.html", user=user, repos=repos, posts=posts)
+    print(is_following)
+    return render_template("profile.html", user=user, repos=repos, posts=posts, is_following=is_following)
+
+@login_required
+@views.route('/unfollow-<user_login>')
+def unfollow(user_login):
+    user_to_unfollow = User.query.filter_by(login=user_login).first()
+    current_user.unfollow(user_to_unfollow)
+    db.session.commit()
+    return f'''
+    <button 
+        type="button" 
+        class="btn btn-primary" 
+        hx-get="/follow-{user_login}" 
+        hx-swap="outerHTML">
+        Follow
+    </button>
+    '''
+
+@login_required
+@views.route('/follow-<user_login>')
+def follow(user_login):
+    user_to_follow = User.query.filter_by(login=user_login).first()
+    current_user.follow(user_to_follow)
+    db.session.commit()
+    return f'''
+    <button 
+        type="button" 
+        class="btn btn-success" 
+        hx-get="/unfollow-{user_login}" 
+        hx-swap="outerHTML">
+        Unfollow
+    </button>
+    '''
 
 
 @login_required

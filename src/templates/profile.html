@@ -4,8 +4,25 @@
 {% if user.is_authenticated %}
 <h1>Welcome, {{user.username}}</h1>
 <h2>Your Repositories</h2>
-{% else %}
 <h1>{{user.username}} Profile</h1>
+{% if is_following %}
+<button 
+    type="button" 
+    class="btn btn-success" 
+    hx-get="/unfollow-{{ user.login }}" 
+    hx-swap="outerHTML">
+    Unfollow
+</button>
+{% else %}
+<button 
+    type="button" 
+    class="btn btn-primary" 
+    hx-get="/follow-{{ user.login }}" 
+    hx-swap="outerHTML">
+    Follow
+</button>
+{% endif %}
+
 <h2>Repositories being tracked:</h2>
 {% endif %}
 <ul>
