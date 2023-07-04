@@ -1,4 +1,5 @@
 *venv*
+*migrations*
 *.db*
 *__pycache__*
 *instance*
