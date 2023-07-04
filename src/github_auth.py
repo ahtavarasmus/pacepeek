@@ -18,6 +18,7 @@ def login():
 def github_callback():
     github = OAuth2Session(config.get('GITHUB_CLIENT_ID'),state=session['oauth_state'])
     print(f"Retrieved state {session['oauth_state']}")
+    print(request.url)
 
     token = github.fetch_token(config.get('GITHUB_TOKEN_URL'), 
                                    client_secret=config.get('GITHUB_CLIENT_SECRET'), 

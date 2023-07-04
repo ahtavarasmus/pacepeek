@@ -1,6 +1,7 @@
 from flask import Flask
 from sqlalchemy.orm.exc import NoResultFound
 from flask_login import LoginManager, current_user, login_user
+from flask_migrate import Migrate
 
 import os
 from flask_sqlalchemy import SQLAlchemy
@@ -12,6 +13,8 @@ with open('/etc/pacepeek_config.json') as config_file:
 db = SQLAlchemy()
 DB_NAME = config.get('DB_NAME')
 
+migrate = Migrate()
+
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = config.get('SECRET_KEY')
@@ -19,6 +22,7 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
+    migrate.init_app(app,db)
 
 
     from .views import views 
