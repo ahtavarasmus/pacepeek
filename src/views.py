@@ -15,22 +15,20 @@ import time
 
 views = Blueprint('views', __name__)
 
-
 @login_required
 @views.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == "POST":
         search_term = request.form.get('search')
         user = User.query.filter_by(login=search_term).first()
-        print("MOI")
         if user:
             return redirect(f"/profile/{user.login}")
         flash("Couldn't find the user")
-        
 
     session['oldest_post_time'] = datetime.utcnow()
-    posts = get_next_posts()
-    return render_template("home.html", user=current_user,posts=posts)
+    posts = Post.query.order_by(Post.time_stamp.desc()).limit(POSTS_PER_PAGE).all()
+
+    return render_template("home.html", user=current_user, posts=posts)
 
 @login_required
 @views.route('/profile/<user_login>')
@@ -45,7 +43,6 @@ def profile(user_login):
     # getting all the posts from the user that are ready (not_finished=False)
     posts = Post.query.filter_by(user_id=user.id, not_finished=False).all()
         
-    print(is_following)
     return render_template("profile.html", user=user, repos=repos, posts=posts, is_following=is_following)
 
 @login_required
@@ -76,21 +73,32 @@ def follow(user_login):
         class="btn btn-success" 
         hx-get="/unfollow-{user_login}" 
         hx-swap="outerHTML">
-        Unfollow
+        Following
     </button>
     '''
 
+POSTS_PER_PAGE = 5  # number of posts to load per request
 
 @login_required
 @views.route('/load_more_posts')
 def load_more_posts():
-    # Get the next set of posts 
-    next_posts = get_next_posts()
+    # Get page number from URL parameter
+    page = request.args.get('page', 1, type=int)
+
+    # Query the database for the next set of posts
+    next_posts = Post.query.filter(Post.time_stamp < session['oldest_post_time']).order_by(Post.time_stamp.desc()).paginate(page=page, per_page=POSTS_PER_PAGE).items
+
+
+
+    
+    if next_posts:
+        session['oldest_post_time'] = next_posts[-1].time_stamp
 
     # Render the posts to a string of HTML
-    posts_html = render_template_string('_posts.html', posts=next_posts)
+    posts_html = render_template('_posts.html', posts=next_posts)
+    return render_template_string('<div hx-get="/load_more_posts?page={{page}}" hx-trigger="revealed" hx-swap="beforeend">{{posts_html}}</div>', page=page+1, posts_html=posts_html)
 
-    return posts_html
+
 
 
 @login_required
@@ -130,7 +138,7 @@ def add_repo_to_watch_list():
                 flash(f"Added {repo_name} by {owner_login} to watch list")
 
 
-    return redirect(url_for('views.profile'))
+    return redirect(f'/profile/{current_user.login}')
 
 @views.route('/payload', methods=['POST'])
 def payload():

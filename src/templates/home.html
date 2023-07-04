@@ -2,9 +2,14 @@
 {% block title %}PacePeek - Home{% endblock %}
 {% block content %}
 <h1>Home</h1>
-<div id="posts" hx-get="/load_more_posts" hx-trigger="revealed" hx-indicator="#loading-indicator">
+<div id="posts">
     {% include '_posts.html' %}
+    <div id="load-more-container" 
+         hx-get="/load_more_posts?page=2" 
+         hx-trigger="revealed" 
+         hx-indicator="#loading-indicator"
+         hx-swap="beforeend">
+    </div>
 </div>
 <div id="loading-indicator">Loading...</div>
-
 {% endblock %}

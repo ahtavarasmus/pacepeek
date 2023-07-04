@@ -10,8 +10,9 @@
     type="button" 
     class="btn btn-success" 
     hx-get="/unfollow-{{ user.login }}" 
+    title="Unfollow?"
     hx-swap="outerHTML">
-    Unfollow
+    Following 
 </button>
 {% else %}
 <button 

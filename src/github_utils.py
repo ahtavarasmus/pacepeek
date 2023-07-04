@@ -21,7 +21,7 @@ def setup_webhook(user: User, repo_name: str, owner_login: str):
         'active': True,
         'events': ['push'],
         'config': {
-            'url': 'https://2671e04ad2ab.ngrok.app/payload',  # Replace with your server's URL.
+            'url': f'{config.get("NGROK_URL")}/payload', 
             'content_type': 'json',
         },
     }
@@ -110,8 +110,9 @@ def handle_payload(payload: dict):
     owner_login = payload['repository']['owner']['login']
     commit_patches_data = get_commit_patches_data(owner_login, repo_name, commit_sha)
     sig = judge_significance(commit_patches_data)
-    if sig == 5:
-        print("Significant")
+    print(sig)
+    #if sig == 5:
+    if True:
         post_text = let_gpt_explain(owner_login,commit_patches_data)
         post = Post.query.filter_by(repo=repo_name, not_finished=True).first()
         post.not_finished = False
