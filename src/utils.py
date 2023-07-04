@@ -6,8 +6,27 @@ import requests
 from flask import session
 from flask_login import current_user
 from requests_oauthlib import OAuth2Session
+from datetime import datetime
 
 openai.api_key = config.get('OPENAI_API_KEY')
+
+
+def get_next_posts():
+
+    oldest_post_time = session.get("oldest_post_time",default=datetime.utcnow())
+    all_legal_posts = []
+    for user in current_user.followers:
+        user_posts = Post.query.filter((Post.user_id == user.id) & (Post.time_stamp > oldest_post_time)).all()
+
+        all_legal_posts.append(user_posts)
+
+    next_posts = []
+    next_posts = sorted(next_posts, key=lambda x: x.time_stamp, reverse=True)[:5]
+
+    if next_posts:
+        session['oldest_post'] = next_posts[-1].time_stamp.timestamp()
+    return next_posts
+
 
 
 def get_repos():

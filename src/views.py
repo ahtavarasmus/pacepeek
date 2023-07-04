@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, render_template_string
 
 from flask_login import login_required, current_user
 from requests_oauthlib import OAuth2Session
@@ -7,8 +7,9 @@ from src.github_auth import login
 from . import db,config
 from .models import User, Repo, Post
 from pprint import pprint
-from .utils import get_repos
+from .utils import get_repos,get_next_posts
 from .github_utils import handle_payload, setup_webhook
+from datetime import datetime
 import time
 
 
@@ -18,31 +19,8 @@ views = Blueprint('views', __name__)
 @login_required
 @views.route('/', methods=['GET', 'POST'])
 def home():
-    following = []
-    posts = []
-    # populating posts list with random posts to help comparison
-    for user in following:
-        for i, post in enumerate(user.posts):
-            # assuming enumerate starts from zero?
-            if i == 5:
-                break
-            posts.append(post)
-
-    found_newer = True
-    while found_newer:
-        found_newer = False
-        for user in following:
-            user_posts = user.posts
-            # TODO: sort by time here or keep them always sorted by time
-            for post in user.posts:
-                if post not in posts:
-                    for i,cur_post in enumerate(posts):
-                        if post.time_stamp > cur_post.time_stamp:
-                            posts[i] = post
-                            found_newer = True
-                            break
-        
-
+    session['oldest_post_time'] = datetime.utcnow()
+    posts = get_next_posts()
     return render_template("home.html", user=current_user,posts=posts)
 
 @login_required
@@ -60,6 +38,16 @@ def profile(login):
     return render_template("profile.html", user=user, repos=repos, posts=posts)
 
 
+@login_required
+@views.route('/load_more_posts')
+def load_more_posts():
+    # Get the next set of posts 
+    next_posts = get_next_posts()
+
+    # Render the posts to a string of HTML
+    posts_html = render_template_string('_posts.html', posts=next_posts)
+
+    return posts_html
 
 
 @login_required

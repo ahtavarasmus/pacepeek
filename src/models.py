@@ -1,5 +1,7 @@
 from . import db
+from datetime import datetime
 from flask_login import UserMixin
+from sqlalchemy.sql import func
 
 followers = db.Table('followers',
     db.Column('follower_id', db.Integer, db.ForeignKey('user.id')),
@@ -42,11 +44,13 @@ class User(db.Model,UserMixin):
     def __repr__(self):
         return '<User %r' % self.username
 
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     repo = db.Column(db.String(300))
     text = db.Column(db.String)
     not_finished = db.Column(db.Boolean, default=True, nullable=False)
+    time_stamp = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     commits = db.relationship('Commit', backref='post')
