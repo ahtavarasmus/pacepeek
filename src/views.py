@@ -26,7 +26,11 @@ def home():
         flash("Couldn't find the user")
 
     session['oldest_post_time'] = datetime.utcnow()
-    posts = Post.query.order_by(Post.time_stamp.desc()).limit(POSTS_PER_PAGE).all()
+    followed_users = current_user.followed.all()
+    followed_users_ids = [user.id for user in followed_users]
+    #followed_users_ids.append(current_user.id) # include the current user's posts
+    posts = Post.query.filter(Post.user_id.in_(followed_users_ids)).order_by(Post.time_stamp.desc()).limit(POSTS_PER_PAGE).all()
+
 
     return render_template("home.html", user=current_user, posts=posts)
 
@@ -77,7 +81,7 @@ def follow(user_login):
     </button>
     '''
 
-POSTS_PER_PAGE = 5  # number of posts to load per request
+POSTS_PER_PAGE = 3  # number of posts to load per request
 
 @login_required
 @views.route('/load_more_posts')
@@ -86,9 +90,11 @@ def load_more_posts():
     page = request.args.get('page', 1, type=int)
 
     # Query the database for the next set of posts
-    next_posts = Post.query.filter(Post.time_stamp < session['oldest_post_time']).order_by(Post.time_stamp.desc()).paginate(page=page, per_page=POSTS_PER_PAGE).items
 
-
+    followed_users = current_user.followed.all()
+    followed_users_ids = [user.id for user in followed_users]
+    #followed_users_ids.append(current_user.id) # include the current user's posts
+    next_posts = Post.query.filter(Post.user_id.in_(followed_users_ids), Post.time_stamp < session['oldest_post_time']).order_by(Post.time_stamp.desc()).paginate(page=page, per_page=POSTS_PER_PAGE).items
 
     
     if next_posts:
@@ -96,7 +102,8 @@ def load_more_posts():
 
     # Render the posts to a string of HTML
     posts_html = render_template('_posts.html', posts=next_posts)
-    return render_template_string('<div hx-get="/load_more_posts?page={{page}}" hx-trigger="revealed" hx-swap="beforeend">{{posts_html}}</div>', page=page+1, posts_html=posts_html)
+    return render_template_string('<div hx-get="/load_more_posts?page={{page}}" hx-trigger="revealed" hx-swap="beforeend">{{posts_html | safe}}</div>', page=page+1, posts_html=posts_html)
+
 
 
 
