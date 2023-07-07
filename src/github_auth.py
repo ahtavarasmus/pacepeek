@@ -8,7 +8,7 @@ github_auth = Blueprint('github_auth', __name__)
 
 @github_auth.route('/login')
 def login():
-    github = OAuth2Session(config.get('GITHUB_CLIENT_ID'),redirect_uri=config.get('GITHUB_REDIRECT_URI'),scope=config.get('GITHUB_SCOPE'))
+    github = OAuth2Session(config.get('GITHUB_CLIENT_ID'),redirect_uri=f"{config.get('APP_URL')}{config.get('GITHUB_REDIRECT_PATH')}",scope=config.get('GITHUB_SCOPE'))
     authorization_url, state = github.authorization_url(config.get('GITHUB_AUTHORIZATION_URL'))
     session['oauth_state'] = state
     print(f"Stored state {state}")

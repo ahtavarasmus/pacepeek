@@ -21,7 +21,7 @@ def setup_webhook(user: User, repo_name: str, owner_login: str):
         'active': True,
         'events': ['push'],
         'config': {
-            'url': f'{config.get("NGROK_URL")}/payload', 
+            'url': f'{config.get("APP_URL")}/payload', 
             'content_type': 'json',
         },
     }
