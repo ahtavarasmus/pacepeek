@@ -3,8 +3,9 @@
 {% block content %}
 {% if user.is_authenticated %}
 <h1>Welcome, {{user.username}}</h1>
-<h2>Your Repositories</h2>
+{% else %}
 <h1>{{user.username}} Profile</h1>
+{% endif %}
 {% if is_following %}
 <button 
     type="button" 
@@ -25,7 +26,6 @@
 {% endif %}
 
 <h2>Repositories being tracked:</h2>
-{% endif %}
 <ul>
 {% for repo in repos %}
 <li><a href="https://github.com/{{repo.owner}}/{{repo.name}}">{{repo.name}}</a></li>

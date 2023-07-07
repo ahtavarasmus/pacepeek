@@ -15,7 +15,6 @@ import time
 
 views = Blueprint('views', __name__)
 
-@login_required
 @views.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == "POST":
@@ -25,12 +24,16 @@ def home():
             return redirect(f"/profile/{user.login}")
         flash("Couldn't find the user")
 
-    session['oldest_post_time'] = datetime.utcnow()
-    followed_users = current_user.followed.all()
-    followed_users_ids = [user.id for user in followed_users]
-    #followed_users_ids.append(current_user.id) # include the current user's posts
-    posts = Post.query.filter(Post.user_id.in_(followed_users_ids)).order_by(Post.time_stamp.desc()).limit(POSTS_PER_PAGE).all()
+    if current_user.is_authenticated:
+        session['oldest_post_time'] = datetime.utcnow()
+        followed_users = current_user.followed.all()
+        followed_users_ids = [user.id for user in followed_users]
+        #followed_users_ids.append(current_user.id) # include the current user's posts
+        posts = Post.query.filter(Post.user_id.in_(followed_users_ids)).order_by(Post.time_stamp.desc()).limit(POSTS_PER_PAGE).all()
+    else:
+        posts = []
 
+    print("users:",User.query.all())
 
     return render_template("home.html", user=current_user, posts=posts)
 
@@ -81,7 +84,7 @@ def follow(user_login):
     </button>
     '''
 
-POSTS_PER_PAGE = 3  # number of posts to load per request
+POSTS_PER_PAGE = 5  # number of posts to load per request
 
 @login_required
 @views.route('/load_more_posts')

@@ -46,44 +46,43 @@ def get_repos():
             repos_dict[repo_name] = owner_login
     return repos_dict
 
-def let_gpt_explain(username: str, changes: str):
+def generate_summary(commit_patches_data: str) -> str:
     """
-    Uses GPT-4 to explain the changes made in a commit.
+    Uses GPT-4 to generate a summary of a commit.
 
     Args:
-        changes (str): The changes made in a commit.
+        commit_patches_data (str): The commit patches data.
 
     Returns:
-        message (str): The explanation of the changes made in a commit.
+        summary (str): The summary of the commit.
     """
-    response = openai.ChatCompletion.create(
-        model="gpt-4-0613",
-        messages=[
-            {"role": "system", "content": f"""Welcome to the GPT-4 API. Your function is to analyze changes made in GitHub commits. When provided with a list of commit messages and filenames their corresponding changes patches, your task is to summarize what changes the user, {username}, made. Only when user has made some interesting choice of code should you explain the trick, but mostly you should not explain what the code does, you just explain what user did. For example if user implemented mostly just a known algorithm, you don't explain it, but just say that user used that algorithm. These summaries will be converted into clear, concise posts including bullet points of the changes. These posts are then uploaded to social media platforms, so they must be clear, easy-to-understand summaries of the changes. Even though the posts are written in third person and automated, they should still contain all relevant information in a manner that a person who didn't make those changes would understand.
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4-0613",
+            messages=[
+                {"role": "system", "content": f"""Your task is to summarize the following commit patches into a concise, easily readable message that describes the functional changes made. Do not just state what files were changed or added, but explain the changes in terms of their functionality and impact. For instance, if an algorithm was implemented, describe which algorithm it is and what problem it solves. The summary should be brief, like a Tweet (max 280 characters). 
 
-Let's take a look at an example:
+    Here are the commit patches:
 
-Based on recent commits made by {username}, here's a breakdown of the key changes:
+    {commit_patches_data}"""},
+                {"role": "user","content": f"Please generate a brief summary of these commit patches, focusing on the functionality of the changes."},
+            ]
+        )
 
-    - {username} updated raw and contour plots, making them more interactive and user-friendly by using matplotlib.
-    - He added a line to the raw plot for better data visualization, which also interacts with the third plot.
-    - He introduced new classes for RawPlot and ContourPlot, standardizing the plot generation process.
-    - Within these new classes, {username} included methods for data plotting and addition of draggable lines, simplifying the overall application use.
-    - The 'Invert & Plot' button has been re-labeled to 'Invert' for better clarity on its function.
-    - {username} removed some redundant code that was originally responsible for updating the plots, as the vertical lines now handle updates.
+        if 'choices' in response and 'message' in response['choices'][0] and 'content' in response['choices'][0]['message']:
+            summary = response['choices'][0]['message']['content']
+        else:
+            raise ValueError('Unexpected response format')
+            
+    except Exception as e:
+        print(f'Error: {str(e)}')
+        summary = None
 
-Remember, your output should be factual, concise, and clear, ensuring any reader can easily grasp the changes made.
-
-             You should output the post as html, so that "-" indicates <li> item tag and paragraph <p> and so on.
-"""},
-            {"role": "user","content": f"{changes}"},
-        ]
-    )
-    message = response["choices"][0]["message"]["content"]
-    return message
+    return summary
 
 
-def judge_significance(commit_patches_data: str) -> int:
+
+def judge_significance(commit_patches_data: str):
     """
     Uses GPT-4 to judge the significance of a commit.
 
@@ -91,30 +90,38 @@ def judge_significance(commit_patches_data: str) -> int:
         commit_patches_data (str): The commit patches data.
 
     Returns:
-        score (int): The significance score of the commit.
+        significance (str): 'significant' or 'not significant'
     """
-    prompt = f""""""
-    response = openai.ChatCompletion.create(
-        model="gpt-4-0613",
-        messages=[
-            {"role": "system", "content": f"""Your task is to analyze the provided commits and their filenames and patches and evaluate their significance in terms of contributing to a summary post. If there is multiple commits you give the significance based on all of them and NOT judge them individually. Assign a significance score on a scale of 1 to 5 (integers, no floating point numbers), where 5 denotes 'significant enough for a summary post' and 1 denotes 'not enough significant changes'. 
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4-0613",
+            messages=[
+                {"role": "system", "content": f"""Your task is to analyze the provided commits and evaluate their significance. If there are multiple commits, analyze them collectively. Your response should indicate whether these commits are 'significant' or 'not significant'.
 
-For a commit/commits to score 5, it should contain at least one small, completed feature (approximately 100 lines of code), OR make significant progress on a larger feature compared to the features approx size, OR demonstrate substantial refactoring and code cleanup. 
+    A 'significant' commit could:
+    - Add a new feature or substantially progress a larger feature
+    - Perform a major refactor or significant code cleanup
 
-Small refactors or deletions alone would not warrant a score of 5, unless they affect approximately 200 lines of code or more. 
+    A 'not significant' commit could:
+    - Involve minor tweaks or bug fixes
+    - Add comments or documentation
+    - Perform small refactoring tasks
 
-If there is more than 5 commits to analyze, just give significance score 5.
+    Please judge the following commit patches and determine their significance by outputing only 'significant' or 'not significant'.:
 
-Remember, you will not judge the commits individually, but rather as a whole.
+    {commit_patches_data}"""},
+                {"role": "user","content": f"Please evaluate if the given commit patches are 'significant' or 'not significant'."},
+            ]
+        )
 
-Please analyze the following commit patches and assign a significance score:
+        if 'choices' in response and 'message' in response['choices'][0] and 'content' in response['choices'][0]['message']:
+            significance = response['choices'][0]['message']['content']
+        else:
+            raise ValueError('Unexpected response format')
+            
+    except Exception as e:
+        print(f'Error: {str(e)}')
+        significance = None
 
-{commit_patches_data}"""},
-            {"role": "user","content": f"Please assign a significance score between 1 and 5 for the given commit patches."},
-        ]
-    )
-
-    score = int(response['choices'][0]['message']['content'])
-    return score
-
+    return significance
 

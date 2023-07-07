@@ -2,7 +2,7 @@ from requests_oauthlib import OAuth2Session
 from pprint import pprint
 from . import config,db
 from .models import User, Post, Commit, Patch
-from .utils import let_gpt_explain, judge_significance
+from .utils import judge_significance, generate_summary
 import requests
 
 
@@ -110,16 +110,22 @@ def handle_payload(payload: dict):
     owner_login = payload['repository']['owner']['login']
     commit_patches_data = get_commit_patches_data(owner_login, repo_name, commit_sha)
     sig = judge_significance(commit_patches_data)
-    print(sig)
-    #if sig == 5:
-    if True:
-        post_text = let_gpt_explain(owner_login,commit_patches_data)
+    if sig is None:
+        print('Error judging significance')
+        return
+    print(sig.lower())
+    if sig.lower() == "significant":
+        post_text = generate_summary(commit_patches_data)
+        if post_text is None:
+            print('Error generating summary')
+            return
         post = Post.query.filter_by(repo=repo_name, not_finished=True).first()
         post.not_finished = False
         post.text = post_text
         db.session.commit()
         print(post)
     else:
-        print("Not significant:", sig)
+        print("Not significant")
+
 
 
