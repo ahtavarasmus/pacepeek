@@ -37,7 +37,6 @@ def home():
 
     return render_template("home.html", user=current_user, posts=posts)
 
-@login_required
 @views.route('/profile/<user_login>')
 def profile(user_login):
     if current_user.login == user_login:
