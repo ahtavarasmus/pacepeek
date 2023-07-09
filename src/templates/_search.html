@@ -1,0 +1,16 @@
+<style>
+    #myList {
+        list-style: none; /* Removes the list bullet points */
+        padding-left: 0; /* Removes the default padding on the left side */
+    }
+    #myList li:first-child {
+        background-color: #333; /* Gives the first list item a darker background */
+        color: #fff; /* Gives the first list item white text */
+    }
+</style>
+<ul id="myList">
+{% for user in users %}
+    <li>{{ user.login }}</li>
+{% endfor %}
+</ul>
+

@@ -18,8 +18,9 @@ views = Blueprint('views', __name__)
 @views.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == "POST":
-        search_term = request.form.get('search')
-        user = User.query.filter_by(login=search_term).first()
+        user_login = session.get('search_result')
+        print("user_login:",user_login)
+        user = User.query.filter_by(login=user_login).first()
         if user:
             return redirect(f"/profile/{user.login}")
         flash("Couldn't find the user")
@@ -107,7 +108,19 @@ def load_more_posts():
     return render_template_string('<div hx-get="/load_more_posts?page={{page}}" hx-trigger="revealed" hx-swap="beforeend">{{posts_html | safe}}</div>', page=page+1, posts_html=posts_html)
 
 
+@views.route('/search', methods=['POST'])
+def search():
+    """
+    returns a list of users that match the search term
+    """
+    search_term = request.form.get('search')
+    print("search_term:",search_term)
+    users = User.query.filter(User.username.like(f"%{search_term}%")).all()
+    print("users:",users)
+    if users:
+        session['search_result'] = users[0].login
 
+    return render_template('_search.html', users=users)
 
 
 @login_required
