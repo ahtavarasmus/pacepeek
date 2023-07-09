@@ -3,9 +3,6 @@
 {% block content %}
 {% if user.is_authenticated %}
 <h1>Welcome, {{user.username}}</h1>
-{% else %}
-<h1>{{user.username}} Profile</h1>
-{% endif %}
 {% if is_following %}
 <button 
     type="button" 
@@ -24,7 +21,9 @@
     Follow
 </button>
 {% endif %}
-
+{% else %}
+<h1>{{user.username}} Profile</h1>
+{% endif %}
 <h2>Repositories being tracked:</h2>
 <ul>
 {% for repo in repos %}

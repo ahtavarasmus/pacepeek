@@ -19,16 +19,28 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
                     <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link {{ active_tag }}" href="{{ url_for('views.home') }}">Home</a></li>
-                    {% if user.is_authenticated %}
-                    <li class="nav-item"><a class="nav-link {{ active_tag }}" href="/profile/{{user.login}}">Profile</a></li>
-                    {% else %}
-                    <li class="nav-item"><a class="nav-link {{active_tag}}" href="/login">Login with Github</a></li>
-                    {% endif %}
+                        <li class="nav-item"><a class="nav-link {{ active_tag }}" href="{{ url_for('views.home') }}">Home</a></li>
+                        {% if user.is_authenticated %}
+                        <li class="nav-item"><a class="nav-link {{ active_tag }}" href="/profile/{{user.login}}">Profile</a></li>
+                        {% else %}
+                        <li class="nav-item"><a class="nav-link {{active_tag}}" href="/login">Login with Github</a></li>
+                        {% endif %}
                     </ul>
-                    <form class="d-flex" action="/" method="POST">
-                        <input class="form-control me-2" name="search" placeholder="Search User" aria-label="Search">
+                    <form class="d-flex" method="POST" action="/">
+                        <input class="form-control me-2" type="search"
+                                name="search" placeholder="Search Users" 
+                                aria-label="Search"
+                                autocomplete="off"
+                                hx-post="/search"
+                                hx-trigger="keyup changed delay:50ms, search"
+                                hx-target="#search_results"
+                                hx-indicator=".htmx-indicator">
                         <button class="btn btn-outline-light" type="submit">Search</button>
+                        <div id="search_results" style="position: absolute; 
+                            display: inline-block; 
+                            padding-right: 25px; 
+                            padding-left:10px;" 
+                            class="mt-5 bg-dark text-white"></div>
                     </form>
                 </div>
             </div>
