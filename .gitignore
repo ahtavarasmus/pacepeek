@@ -1,6 +1,6 @@
 *venv*
-*.pyc
+*.pyc*
 *migrations*
 *.db*
-*__pycache__*
+*/__pycache__*
 *instance*
