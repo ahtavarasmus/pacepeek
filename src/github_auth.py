@@ -67,6 +67,8 @@ def github_callback():
 @github_auth.route('/logout')
 def logout():
     logout_user()
+    for key in list(session.keys()):
+        session.pop(key)
     session.clear()
     return redirect(url_for('views.home'))
 
