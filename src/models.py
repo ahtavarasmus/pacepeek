@@ -10,10 +10,10 @@ followers = db.Table('followers',
 
 class User(db.Model,UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), nullable=False)
-    login = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    github_id = db.Column(db.String(120), unique=True, nullable=False)
+    github_login = db.Column(db.String(120), unique=True, nullable=False)
     email = db.Column(db.String(150),nullable=True)
-    github_token = db.Column(db.String(500),nullable=True)
     posts = db.relationship('Post', backref='user')
     repos = db.relationship('Repo', backref='user')
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -42,7 +42,7 @@ class User(db.Model,UserMixin):
         return str(self.id)
 
     def __repr__(self):
-        return '<User %r' % self.username
+        return '<User %r' % self.name
 
 
 class Post(db.Model):
