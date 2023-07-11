@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 
 from flask_login import login_required, current_user
 from requests_oauthlib import OAuth2Session
+import requests
 
 from src.github_auth import login
 from . import db,config
@@ -18,11 +19,10 @@ views = Blueprint('views', __name__)
 @views.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == "POST":
-        user_login = session.get('search_result')
-        print("user_login:",user_login)
-        user = User.query.filter_by(login=user_login).first()
+        github_login = session.get('search_result')
+        user = User.query.filter_by(github_login=github_login).first()
         if user:
-            return redirect(f"/profile/{user.login}")
+            return redirect(f"/profile/{user.github_login}")
         flash("Couldn't find the user")
 
     if current_user.is_authenticated:
@@ -38,12 +38,12 @@ def home():
 
     return render_template("home.html", user=current_user, posts=posts)
 
-@views.route('/profile/<user_login>')
-def profile(user_login):
-    if current_user.login == user_login:
-        user = current_user
-    else:
-        user = User.query.filter_by(login=user_login).first()
+@views.route('/profile/<github_login>')
+def profile(github_login=None):
+    user = User.query.filter_by(github_login=github_login).first()
+    if not user:
+        flash("Couldn't find the user")
+        return redirect(url_for('views.home'))
 
     repos = user.repos
     is_following = current_user.is_following(user)
@@ -53,32 +53,32 @@ def profile(user_login):
     return render_template("profile.html", user=user, repos=repos, posts=posts, is_following=is_following)
 
 @login_required
-@views.route('/unfollow-<user_login>')
-def unfollow(user_login):
-    user_to_unfollow = User.query.filter_by(login=user_login).first()
+@views.route('/unfollow-<github_login>')
+def unfollow(github_login):
+    user_to_unfollow = User.query.filter_by(github_login=github_login).first()
     current_user.unfollow(user_to_unfollow)
     db.session.commit()
     return f'''
     <button 
         type="button" 
         class="btn btn-primary" 
-        hx-get="/follow-{user_login}" 
+        hx-get="/follow-{github_login}" 
         hx-swap="outerHTML">
         Follow
     </button>
     '''
 
 @login_required
-@views.route('/follow-<user_login>')
-def follow(user_login):
-    user_to_follow = User.query.filter_by(login=user_login).first()
+@views.route('/follow-<github_login>')
+def follow(github_login):
+    user_to_follow = User.query.filter_by(github_login=github_login).first()
     current_user.follow(user_to_follow)
     db.session.commit()
     return f'''
     <button 
         type="button" 
         class="btn btn-success" 
-        hx-get="/unfollow-{user_login}" 
+        hx-get="/unfollow-{github_login}" 
         hx-swap="outerHTML">
         Following
     </button>
@@ -115,10 +115,10 @@ def search():
     """
     search_term = request.form.get('search')
     print("search_term:",search_term)
-    users = User.query.filter(User.username.like(f"%{search_term}%")).all()
+    users = User.query.filter(User.github_login.like(f"%{search_term}%")).all()
     print("users:",users)
     if users:
-        session['search_result'] = users[0].login
+        session['search_result'] = users[0].github_login
 
     return render_template('_search.html', users=users)
 
@@ -126,8 +126,14 @@ def search():
 @login_required
 @views.route('/get-repos',methods=['GET'])
 def get_repos_route():
-    repos = get_repos()
-    repo_options = "\n".join(f'<option value="{name}:{login}">{name}</option>' for name,login in repos.items())
+    repos = get_repos(current_user.github_login)
+    print("repos:",repos)
+    if not repos:
+        flash("Couldn't get the user's repositories")
+        return redirect(url_for('views.profile', github_login=current_user.github_login))
+    flash("Repositories fetched successfully")
+
+    repo_options = "\n".join(f'<option value="{name}">{name}</option>' for name in repos)
     form_html = f'''
     <form action="/add-repo-to-watch-list" method="post">
         <select id="repos" name="repos">
@@ -142,30 +148,40 @@ def get_repos_route():
 @login_required
 @views.route('/add-repo-to-watch-list', methods=['POST'])
 def add_repo_to_watch_list():
-    repo = request.form.get('repos')
-    if repo:
-        repo_name, owner_login = repo.split(":")
-        # Add the repository to the user's watch list
-        if setup_webhook(current_user, repo_name, owner_login):
-            repo = Repo(name=repo_name, owner=owner_login, user_id=current_user.id)
-            db.session.add(repo)
-            db.session.commit()
-            flash(f"Added {repo_name} by {owner_login} to watch list")
-        else:
-            repo = Repo.query.filter_by(name=repo_name, owner=owner_login, user_id=current_user.id).first()
-            if not repo:
-                repo = Repo(name=repo_name, owner=owner_login, user_id=current_user.id)
-                db.session.add(repo)
-                db.session.commit()
-                flash(f"Added {repo_name} by {owner_login} to watch list")
+    repo_name = request.form.get('repos')
+    owner = current_user.github_login
+    
+    hook_id = setup_webhook(current_user, repo_name, owner)
+    print("hook_id",hook_id)
+    if hook_id:
+        repo = Repo(name=repo_name, webhook_id=hook_id, owner=owner, user_id=current_user.id)
+        db.session.add(repo)
+        db.session.commit()
+        flash(f"Added {repo_name} by {owner} to watch list")
+    else:
+        flash("Couldn't add the repository to the watch list")
+        
+    return redirect(f'/profile/{current_user.github_login}')
+
+@login_required
+@views.route('/remove-repo-from-watch-list/<repo_name>/<owner>')
+def remove_repo_from_watch_list(repo_name, owner):
+    repo = Repo.query.filter_by(name=repo_name, owner=owner).first()
+    hook_id = repo.webhook_id
+    headers = {'Authorization': f'token ' + session['access_token']}
+    response = requests.delete(f'https://api.github.com/repos/{owner}/{repo}/hooks/{hook_id}', headers=headers)
+    if response.status_code != 204:
+        flash("Couldn't remove the repository from the watch list")
+        return redirect(f'/profile/{current_user.github_login}')
+
+    db.session.delete(repo)
+    db.session.commit()
+    flash(f"Removed {repo_name} by {owner} from watch list")
+    return redirect(f'/profile/{current_user.github_login}')
 
 
-    return redirect(f'/profile/{current_user.login}')
-
-@views.route('/payload', methods=['POST'])
-def payload():
+@views.route('/webhook/<owner_github_login>/<repo_name>', methods=['POST'])
+def webhook(owner_github_login, repo_name):
     payload = request.get_json()
     handle_payload(payload)
     return '', 204
-
-   

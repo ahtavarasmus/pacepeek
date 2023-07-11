@@ -1,4 +1,5 @@
 from requests_oauthlib import OAuth2Session
+from flask import session
 from pprint import pprint
 from . import config,db
 from .models import User, Post, Commit, Patch
@@ -9,27 +10,27 @@ import requests
 
 def setup_webhook(user: User, repo_name: str, owner_login: str):
     """
-    Sets up a webhook for the given repository.
+    Sets up a webhook for the repository.
     """
-    url = f"https://api.github.com/repos/{owner_login}/{repo_name}/hooks"
-    headers = {
-        'Authorization': f"token {user.github_token}",
-        'Accept': 'application/vnd.github.v3+json',
-    }
-    payload = {
+    
+    data = {
         'name': 'web',
         'active': True,
         'events': ['push'],
         'config': {
-            'url': f'{config.get("APP_URL")}/payload', 
+            'url': f'{config.get("APP_URL")}/webhook/{repo_name}', 
             'content_type': 'json',
-        },
+        }
     }
-    response = requests.post(url, headers=headers, json=payload)
+    access_token = session.get('access_token')
+    headers = {'Authorization': f'token {access_token}'}
+    response = requests.post(f'https://api.github.com/repos/{owner_login}/{repo_name}/hooks', json=data, headers=headers)
+    print(response)
     if response.status_code != 201:
         print(f"Failed to set up webhook for {repo_name}: {response.content}")
-        return False
-    return True
+        return None
+
+    return response.json()['id']
 
 
 def get_github_session(user_login):

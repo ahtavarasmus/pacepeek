@@ -29,22 +29,23 @@ def get_next_posts():
 
 
 
-def get_repos():
+def get_repos(github_login: str):
     """
     Returns a dictionary of user's repositories and their owners from GitHub.
 
     Returns:
         repos_dict (dict): A dictionary of user's repositories and their owners from GitHub.
     """
-    github = OAuth2Session(config.get('GITHUB_CLIENT_ID'), token=session['oauth_token'])
-    repos_json = github.get('https://api.github.com/user/repos').json()
-    repos_dict = {}
-    for repo in repos_json:
-        if not repo['private']:
-            repo_name = repo['name']
-            owner_login = repo['owner']['login']
-            repos_dict[repo_name] = owner_login
-    return repos_dict
+    try:
+        response = requests.get(f'https://api.github.com/users/{github_login}/repos')
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return None
+    
+    repos = response.json()
+    return [repo['name'] for repo in repos]
+
 
 def generate_summary(commit_patches_data: str) -> str:
     """

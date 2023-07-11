@@ -20,8 +20,11 @@ def callback():
     headers = {'Accept': 'application/json'}
     response = requests.post('https://github.com/login/oauth/access_token', data=data, headers=headers)
     access_token = response.json()['access_token']
+
+    # Save the access token in the session
+    session['access_token'] = access_token
+
     user_data = requests.get('https://api.github.com/user', headers={'Authorization': f'token {access_token}'})
-    pprint(user_data.json())
     github_id = user_data.json()['id']
     github_login = user_data.json()['login']
     github_name = user_data.json()['name']

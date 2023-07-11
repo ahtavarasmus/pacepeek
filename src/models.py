@@ -80,7 +80,8 @@ class Patch(db.Model):
 class Repo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(300))
-    owner = db.Column(db.String(300))
+    owner_github_login = db.Column(db.String(300))
+    webhook_id = db.Column(db.String(300))
     latest_commit_sha = db.Column(db.String(300))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 

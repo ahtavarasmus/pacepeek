@@ -2,12 +2,12 @@
 {% block title %}PacePeek - Profile{% endblock %}
 {% block content %}
 {% if user.is_authenticated %}
-<h1>Welcome, {{user.username}}</h1>
+<h1>Welcome, {{user.name}}</h1>
 {% if is_following %}
 <button 
     type="button" 
     class="btn btn-success" 
-    hx-get="/unfollow-{{ user.login }}" 
+    hx-get="/unfollow-{{ user.github_login }}" 
     title="Unfollow?"
     hx-swap="outerHTML">
     Following 
@@ -16,7 +16,7 @@
 <button 
     type="button" 
     class="btn btn-primary" 
-    hx-get="/follow-{{ user.login }}" 
+    hx-get="/follow-{{ user.github_login }}" 
     hx-swap="outerHTML">
     Follow
 </button>
