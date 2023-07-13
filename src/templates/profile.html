@@ -25,12 +25,26 @@
 <h1>{{user.username}} Profile</h1>
 {% endif %}
 <h2>Repositories being tracked:</h2>
-<ul>
-{% for repo in repos %}
-<li><a href="https://github.com/{{repo.owner}}/{{repo.name}}">{{repo.name}}</a></li>
-{% endfor %}
+<div id="repo-list">
+    {% for repo in repos %}
+    <li>
+        <a href="https://github.com/{{repo.owner_github_login}}/{{repo.name}}">{{repo.name}}</a>
+        {% if user.is_authenticated %}
+        <button 
+            type="button" 
+            class="btn btn-danger" 
+            hx-get="/untrack/{{repo.owner_github_login}}/{{repo.name}}" 
+            hx-target="#repo-list"
+            hx-swap="outerHTML"
+            title="Untrack?">
+            Untrack
+        </button>
+        {% endif %}
+    </li>
+    {% endfor %}
+
+</div>
 {% if user.is_authenticated %}
-</ul>
 <div id="add-repo-div">
     <button id="load-repos-btn" hx-get="/get-repos" hx-trigger="click" hx-target="#add-repo-div" hx-swap="outerHTML">
         Search New Repos

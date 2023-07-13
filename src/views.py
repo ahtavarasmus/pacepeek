@@ -131,7 +131,6 @@ def get_repos_route():
     if not repos:
         flash("Couldn't get the user's repositories")
         return redirect(url_for('views.profile', github_login=current_user.github_login))
-    flash("Repositories fetched successfully")
 
     repo_options = "\n".join(f'<option value="{name}">{name}</option>' for name in repos)
     form_html = f'''
@@ -149,27 +148,31 @@ def get_repos_route():
 @views.route('/add-repo-to-watch-list', methods=['POST'])
 def add_repo_to_watch_list():
     repo_name = request.form.get('repos')
-    owner = current_user.github_login
+    owner_github_login = current_user.github_login
+    if not repo_name:
+        flash("Please select a repository")
+        return redirect(url_for('views.profile', github_login=owner_github_login))
     
-    hook_id = setup_webhook(current_user, repo_name, owner)
+    hook_id = setup_webhook(current_user, repo_name, owner_github_login)
     print("hook_id",hook_id)
     if hook_id:
-        repo = Repo(name=repo_name, webhook_id=hook_id, owner=owner, user_id=current_user.id)
+        repo = Repo(name=repo_name, webhook_id=hook_id, owner_github_login=owner_github_login, user_id=current_user.id)
         db.session.add(repo)
         db.session.commit()
-        flash(f"Added {repo_name} by {owner} to watch list")
+        flash(f"Added {repo_name} by {owner_github_login} to watch list")
     else:
         flash("Couldn't add the repository to the watch list")
         
     return redirect(f'/profile/{current_user.github_login}')
 
 @login_required
-@views.route('/remove-repo-from-watch-list/<repo_name>/<owner>')
-def remove_repo_from_watch_list(repo_name, owner):
-    repo = Repo.query.filter_by(name=repo_name, owner=owner).first()
+@views.route('/untrack/<owner>/<repo_name>')
+def untrack_repo(repo_name, owner):
+    repo = Repo.query.filter_by(name=repo_name, owner_github_login=owner).first()
     hook_id = repo.webhook_id
     headers = {'Authorization': f'token ' + session['access_token']}
-    response = requests.delete(f'https://api.github.com/repos/{owner}/{repo}/hooks/{hook_id}', headers=headers)
+    response = requests.delete(f'https://api.github.com/repos/{owner}/{repo_name}/hooks/{hook_id}', headers=headers)
+    print("response:",response)
     if response.status_code != 204:
         flash("Couldn't remove the repository from the watch list")
         return redirect(f'/profile/{current_user.github_login}')
@@ -177,11 +180,21 @@ def remove_repo_from_watch_list(repo_name, owner):
     db.session.delete(repo)
     db.session.commit()
     flash(f"Removed {repo_name} by {owner} from watch list")
-    return redirect(f'/profile/{current_user.github_login}')
+
+    repos = Repo.query.filter_by(user_id=current_user.id).all()
+    return render_template('_repos.html', repos=repos)
 
 
-@views.route('/webhook/<owner_github_login>/<repo_name>', methods=['POST'])
-def webhook(owner_github_login, repo_name):
-    payload = request.get_json()
-    handle_payload(payload)
-    return '', 204
+@views.route('/webhook', methods=['POST'])
+def webhook():
+    payload = request.json
+    # just checking if push event("after") or ping
+    print("hihiH")
+    if "after" in payload:
+        print("payload:",payload)
+        print("haha")
+        try:
+            handle_payload(payload)
+        except:
+            pass
+    return '', 200

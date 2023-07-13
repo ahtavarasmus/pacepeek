@@ -1,4 +1,3 @@
-from requests_oauthlib import OAuth2Session
 from flask import session
 from pprint import pprint
 from . import config,db
@@ -18,14 +17,14 @@ def setup_webhook(user: User, repo_name: str, owner_login: str):
         'active': True,
         'events': ['push'],
         'config': {
-            'url': f'{config.get("APP_URL")}/webhook/{repo_name}', 
+            'url': f'{config.get("APP_URL")}/webhook', 
             'content_type': 'json',
         }
     }
     access_token = session.get('access_token')
     headers = {'Authorization': f'token {access_token}'}
     response = requests.post(f'https://api.github.com/repos/{owner_login}/{repo_name}/hooks', json=data, headers=headers)
-    print(response)
+    print("response",response)
     if response.status_code != 201:
         print(f"Failed to set up webhook for {repo_name}: {response.content}")
         return None

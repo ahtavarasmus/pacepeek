@@ -1,6 +1,9 @@
-*venv*
-*.pyc*
-*migrations*
-*.db*
-*/__pycache__*
-*instance*
+*.env
+venv/
+*/__pycache__/*
+*__pycache__*
+*__pycache__/*
+*.DS_Store
+*.db
+.env
+
